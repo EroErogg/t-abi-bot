@@ -6,7 +6,7 @@ from discord.ext import commands
 
 # Deine ID und dein Bot-Token direkt integriert
 OWNER_ID = 952555406381703218
-TOKEN = "MTU0NDAzODU4MzQ4NzQzNDkxMw.GgfD16.GeyTvx5b0jfwonttGSrcWm75qzlMF8RffmdwTc"
+bot.run(os.environ.get('DISCORD_TOKEN'))
 
 # Intents aktivieren
 intents = discord.Intents.default()
