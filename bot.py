@@ -4,9 +4,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-# Deine ID und dein Bot-Token direkt integriert
+# Deine ID
 OWNER_ID = 952555406381703218
-bot.run(os.environ.get('DISCORD_TOKEN'))
 
 # Intents aktivieren
 intents = discord.Intents.default()
@@ -30,7 +29,7 @@ async def on_ready():
     print("--------------------------------------------------")
 
 # ==========================================
-# 1. AUTOMATISCHES SERVER-SETUP (EXAKT WIE AUF DEN SCREENSHOTS)
+# 1. AUTOMATISCHES SERVER-SETUP
 # ==========================================
 @bot.tree.command(name="setup_server", description="Erstellt exakt alle Kanäle und Emojis aus den Screenshots")
 async def setup_server(interaction: discord.Interaction):
@@ -42,37 +41,31 @@ async def setup_server(interaction: discord.Interaction):
     guild = interaction.guild
 
     try:
-        # Standard-Berechtigungen für Info-Kanäle (Nur Lesen für Mitglieder)
         info_overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=True, send_messages=False),
             guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True)
         }
 
-        # Streng geschützte Berechtigungen für Moderation
         mod_overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
             guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True)
         }
 
-        # 1. Kategorie: Streams & Updates
         cat_streams = await guild.create_category("🔥 • UPDATES & STREAMS")
         await guild.create_text_channel("🔴 >live", category=cat_streams, overwrites=info_overwrites)
         await guild.create_text_channel("❤️ >strada-updates", category=cat_streams, overwrites=info_overwrites)
         await guild.create_text_channel("🗣️ >rollenvergabe", category=cat_streams, overwrites=info_overwrites)
         await guild.create_text_channel("💻 >server-invites", category=cat_streams, overwrites=info_overwrites)
 
-        # 2. Kategorie: Willkommen
         cat_welcome = await guild.create_category("✨ • WILLKOMMEN")
         await guild.create_text_channel("💛 >willkommen", category=cat_welcome, overwrites=info_overwrites)
         await guild.create_text_channel("🚀 >boosts", category=cat_welcome, overwrites=info_overwrites)
 
-        # 3. Kategorie: Informationen & Regeln
         cat_info = await guild.create_category("📌 • INFORMATIONEN")
         await guild.create_text_channel("🔊 >informationen", category=cat_info, overwrites=info_overwrites)
         await guild.create_text_channel("rules", category=cat_info, overwrites=info_overwrites)
         await guild.create_text_channel("moderator-only", category=cat_info, overwrites=mod_overwrites)
 
-        # 4. Kategorie: Community
         cat_comm = await guild.create_category("💬 • COMMUNITY")
         await guild.create_text_channel("💬 >chat", category=cat_comm)
         await guild.create_text_channel("📷 >montagen", category=cat_comm)
@@ -80,19 +73,18 @@ async def setup_server(interaction: discord.Interaction):
         await guild.create_voice_channel("Talk 2", category=cat_comm)
         await guild.create_voice_channel("Talk 3", category=cat_comm)
 
-        # 5. Kategorie: Support
         cat_support = await guild.create_category("🎧 • SUPPORT")
         await guild.create_text_channel("🎫 >ticket", category=cat_support)
         await guild.create_voice_channel("⏰ >Warteraum", category=cat_support)
         await guild.create_voice_channel("🔴 >Live", category=cat_support)
         await guild.create_voice_channel("🔴 >Warteschlange", category=cat_support)
 
-        await interaction.followup.send("✅ Server-Setup erfolgreich abgeschlossen! Alle Kanäle sehen exakt aus wie auf deinen Screenshots.", ephemeral=True)
+        await interaction.followup.send("✅ Server-Setup erfolgreich abgeschlossen!", ephemeral=True)
     except Exception as e:
         await interaction.followup.send(f"❌ Fehler beim Setup: {e}", ephemeral=True)
 
 # ==========================================
-# 2. WELCOME & AUTO-ROLLE ("abi's")
+# 2. WELCOME & AUTO-ROLLE
 # ==========================================
 @bot.event
 async def on_member_join(member):
@@ -131,7 +123,7 @@ async def on_member_update(before, after):
             await channel.send(embed=embed)
 
 # ==========================================
-# 4. TICKET SYSTEM (MIT DROPDOWN)
+# 4. TICKET SYSTEM
 # ==========================================
 class TicketSelect(discord.ui.Select):
     def __init__(self):
@@ -196,7 +188,7 @@ async def setup_ticket(interaction: discord.Interaction):
 # 5. MODERATION & BAN SYSTEM
 # ==========================================
 @bot.tree.command(name="ban", description="Bannt einen User vom Server")
-@app_commands.checks.has_permissions(ban_members=TypeError if False else bool) # Standard check
+@app_commands.checks.has_permissions(ban_members=True)
 async def ban(interaction: discord.Interaction, member: discord.Member, grund: str = "Kein Grund angegeben"):
     await member.ban(reason=grund)
     embed = discord.Embed(title="🔨 Benutzer gebannt", description=f"{member.mention} wurde erfolgreich gebannt.\nGrund: {grund}", color=0xe74c3c)
@@ -221,5 +213,5 @@ async def stats(interaction: discord.Interaction):
     embed.set_footer(text="T ABI BOT System")
     await interaction.response.send_message(embed=embed)
 
-# Bot starten
-bot.run(TOKEN)
+# Bot starten (ganz am Ende!)
+bot.run(os.environ.get('DISCORD_TOKEN'))
