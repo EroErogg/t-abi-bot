@@ -5,28 +5,65 @@ from discord.ext import commands
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 
-# --- 1. Mini-Webserver für Render (Löst den Port-Fehler) ---
+# --- 1. Mini-Webserver für Render ---
 class DummyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"Bot is alive!")
 
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
+
 def start_server():
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(("0.0.0.0", port), DummyHandler)
     server.serve_forever()
 
-# Startet den Webserver im Hintergrund, damit Render zufrieden ist
 threading.Thread(target=start_server, daemon=True).start()
 
 
 # --- 2. Discord Bot Konfiguration ---
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True
+intents.members = True  # Wichtig für Autorole!
 
 bot = commands.Bot(command_prefix="/", intents=intents)
+
+# --- 3. Ticket-System (Genau deine 3 Optionen) ---
+class TicketSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="Support", description="Allgemeine Hilfe und Fragen", emoji="🛟"),
+            discord.SelectOption(label="Live-Frage", description="Fragen zu Streams oder Live-Inhalten", emoji="🔴"),
+            discord.SelectOption(label="Strada-Frage", description="Fragen rund um Strada", emoji="🔥"),
+        ]
+        super().__init__(placeholder="Wähle dein Anliegen für das Ticket...", min_values=1, max_values=1, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_message(f"Dein Ticket für **{self.values[0]}** wurde erfolgreich erstellt!", ephemeral=True)
+
+class TicketView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(TicketSelect())
+
+
+# --- 4. Events (Autorole & Ready) ---
+@bot.event
+async def on_member_join(member: discord.Member):
+    # Automatische Rolle zuweisen (ID: 1543819197706936481)
+    role_id = 1543819197706936481
+    role = member.guild.get_role(role_id)
+    if role:
+        try:
+            await member.add_roles(role)
+            print(f"✅ Autorole '{role.name}' wurde an {member.name} vergeben.")
+        except Exception as e:
+            print(f"❌ Fehler beim Vergeben der Autorole: {e}")
+    else:
+        print(f"⚠️ Autorole mit ID {role_id} wurde auf dem Server nicht gefunden!")
 
 @bot.event
 async def on_ready():
@@ -37,17 +74,27 @@ async def on_ready():
     except Exception as e:
         print(e)
 
-# Beispiel-Befehl zum Testen (/ping)
+
+# --- 5. Slash-Befehle ---
 @bot.tree.command(name="ping", description="Testet, ob der Bot erreichbar ist.")
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("Pong! 🏓 Alles läuft einwandfrei.", ephemeral=True)
 
+@bot.tree.command(name="setup_ticket", description="Sendet das Ticket-Menü in den Kanal.")
+async def setup_ticket(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="🎫 Support & Tickets",
+        description="Wähle unten im Menü dein Anliegen aus, um einen privaten Support-Kanal zu öffnen.",
+        color=discord.Color.blue()
+    )
+    await interaction.response.send_message(embed=embed, view=TicketView())
 
-# --- 3. Bot Starten ---
+
+# --- 6. Bot Starten ---
 async def main():
     token = os.environ.get("DISCORD_TOKEN")
     if not token:
-        print("❌ FEHLER: Kein DISCORD_TOKEN in den Environment Variables gefunden!")
+        print("❌ FEHLER: Kein DISCORD_TOKEN gefunden!")
         return
     
     async with bot:
