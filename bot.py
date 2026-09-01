@@ -31,7 +31,7 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-# --- 3. Ticket-System mit fester ID ---
+# --- 3. Ticket-System (Erstellt jetzt echte Kanäle!) ---
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
@@ -48,15 +48,40 @@ class TicketSelect(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction):
+        # Zeigt dem User sofort an, dass im Hintergrund gearbeitet wird (verhindert Timeout)
+        await interaction.response.defer(ephemeral=True)
+        
+        guild = interaction.guild
+        member = interaction.user
+        category_name = self.values[0]
+
+        # Berechtigungen: Nur der User, der Admin/Bot und Rollen mit Admin-Rechten sehen das Ticket
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            member: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_messages=True),
+            guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_messages=True)
+        }
+
+        # Kanalname generieren (z.B. ticket-tesak-support)
+        safe_name = f"ticket-{member.name}-{category_name}".lower().replace(" ", "-").replace("ä", "ae").replace("ö", "oe").replace("ü", "ue")
+
         try:
-            # Prüfen ob bereits geantwortet wurde, um Fehler zu vermeiden
-            if not interaction.response.is_done():
-                await interaction.response.send_message(
-                    f"Dein Ticket für **{self.values[0]}** wurde erfolgreich erstellt!", 
-                    ephemeral=True
-                )
+            # Erstelle den echten Textkanal auf dem Server
+            ticket_channel = await guild.create_text_channel(name=safe_name, overwrites=overwrites)
+
+            # Begrüßungsnachricht in den neuen Ticket-Kanal schicken
+            embed = discord.Embed(
+                title=f"🎫 Ticket: {category_name}",
+                description=f"Hallo {member.mention}!\nDanke für dein Anliegen. Ein Teammitglied wird sich gleich hier melden.",
+                color=discord.Color.blue()
+            )
+            await ticket_channel.send(embed=embed)
+
+            # Dem User als Antwort (nur für ihn sichtbar) den Link zum neuen Kanal geben
+            await interaction.followup.send(f"Dein Ticket wurde erfolgreich erstellt: {ticket_channel.mention}", ephemeral=True)
+
         except Exception as e:
-            print(f"Fehler im Ticket-Callback: {e}")
+            await interaction.followup.send(f"Fehler beim Erstellen des Kanals: {e}", ephemeral=True)
 
 class TicketView(discord.ui.View):
     def __init__(self):
@@ -82,7 +107,6 @@ async def on_ready():
     global is_synced
     print(f"🚀 Bot ist online als {bot.user}")
     
-    # Registriert das Menü dauerhaft
     bot.add_view(TicketView())
     
     if not is_synced:
