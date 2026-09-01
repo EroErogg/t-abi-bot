@@ -27,11 +27,11 @@ threading.Thread(target=start_server, daemon=True).start()
 # --- 2. Discord Bot Konfiguration ---
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True  # Wichtig für Autorole!
+intents.members = True
 
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-# --- 3. Ticket-System (Genau deine 3 Optionen) ---
+# --- 3. Ticket-System ---
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
@@ -39,7 +39,7 @@ class TicketSelect(discord.ui.Select):
             discord.SelectOption(label="Live-Frage", description="Fragen zu Streams oder Live-Inhalten", emoji="🔴"),
             discord.SelectOption(label="Strada-Frage", description="Fragen rund um Strada", emoji="🔥"),
         ]
-        super().__init__(placeholder="Wähle dein Anliegen für das Ticket...", min_values=1, max_values=1, options=options)
+        super().__init__(placeholder="Wähle dein Anliegen für das Ticket...", min_values=1, max_values=1, options=options, custom_id="persistent_ticket_select")
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.send_message(f"Dein Ticket für **{self.values[0]}** wurde erfolgreich erstellt!", ephemeral=True)
@@ -53,21 +53,21 @@ class TicketView(discord.ui.View):
 # --- 4. Events (Autorole & Ready) ---
 @bot.event
 async def on_member_join(member: discord.Member):
-    # Automatische Rolle zuweisen (ID: 1543819197706936481)
     role_id = 1543819197706936481
     role = member.guild.get_role(role_id)
     if role:
         try:
             await member.add_roles(role)
-            print(f"✅ Autorole '{role.name}' wurde an {member.name} vergeben.")
         except Exception as e:
-            print(f"❌ Fehler beim Vergeben der Autorole: {e}")
-    else:
-        print(f"⚠️ Autorole mit ID {role_id} wurde auf dem Server nicht gefunden!")
+            print(f"Fehler bei Autorole: {e}")
 
 @bot.event
 async def on_ready():
     print(f"🚀 Bot ist online als {bot.user}")
+    
+    # WICHTIG: Registriert das Menü dauerhaft, damit es nach Neustarts nicht fehlschlägt!
+    bot.add_view(TicketView())
+    
     try:
         synced = await bot.tree.sync()
         print(f"🔄 {len(synced)} Slash-Commands synchronisiert.")
