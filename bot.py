@@ -31,7 +31,7 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-# --- 3. Ticket-System (Mit stabiler ID) ---
+# --- 3. Ticket-System mit fester ID ---
 class TicketSelect(discord.ui.Select):
     def __init__(self):
         options = [
@@ -39,11 +39,22 @@ class TicketSelect(discord.ui.Select):
             discord.SelectOption(label="Live-Frage", description="Fragen zu Streams oder Live-Inhalten", emoji="🔴"),
             discord.SelectOption(label="Strada-Frage", description="Fragen rund um Strada", emoji="🔥"),
         ]
-        super().__init__(placeholder="Wähle dein Anliegen für das Ticket...", min_values=1, max_values=1, options=options, custom_id="persistent_ticket_select_abi")
+        super().__init__(
+            placeholder="Wähle dein Anliegen für das Ticket...", 
+            min_values=1, 
+            max_values=1, 
+            options=options, 
+            custom_id="abi_ticket_dropdown_v1"
+        )
 
     async def callback(self, interaction: discord.Interaction):
         try:
-            await interaction.response.send_message(f"Dein Ticket für **{self.values[0]}** wurde erfolgreich erstellt!", ephemeral=True)
+            # Prüfen ob bereits geantwortet wurde, um Fehler zu vermeiden
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    f"Dein Ticket für **{self.values[0]}** wurde erfolgreich erstellt!", 
+                    ephemeral=True
+                )
         except Exception as e:
             print(f"Fehler im Ticket-Callback: {e}")
 
@@ -64,7 +75,6 @@ async def on_member_join(member: discord.Member):
         except Exception as e:
             print(f"Fehler bei Autorole: {e}")
 
-# Verhindert mehrfaches Syncen bei Reconnects
 is_synced = False
 
 @bot.event
@@ -72,20 +82,20 @@ async def on_ready():
     global is_synced
     print(f"🚀 Bot ist online als {bot.user}")
     
-    # Dauerhafte Überwachung für das Ticket-Menü aktivieren
+    # Registriert das Menü dauerhaft
     bot.add_view(TicketView())
     
     if not is_synced:
         try:
             synced = await bot.tree.sync()
-            print(f"🔄 {len(synced)} Slash-Commands erfolgreich synchronisiert.")
+            print(f"🔄 {len(synced)} Slash-Commands synchronisiert.")
             is_synced = True
         except Exception as e:
             print(f"Fehler beim Syncen: {e}")
 
 
 # --- 5. Slash-Befehle ---
-@bot.tree.command(name="ping", description="Testet, ob erreichbar.")
+@bot.tree.command(name="ping", description="Testet, ob der Bot erreichbar ist.")
 async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("Pong! 🏓 Alles läuft einwandfrei.", ephemeral=True)
 
